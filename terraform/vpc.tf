@@ -4,7 +4,7 @@ resource "aws_vpc" "devsecops-jenkins-vpc" {
   enable_dns_hostnames = "true"
 
   tags = {
-    Name = "var.vpc-name"
+    Name = var.vpc-name
   }
 }
 
@@ -13,7 +13,7 @@ resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.devsecops-jenkins-vpc.id
 
   tags = {
-    Name = "var.igw-name"
+    Name = var.igw-name
   }
 }
 
@@ -25,7 +25,7 @@ resource "aws_subnet" "public-subnet" {
   map_public_ip_on_launch = "true"
 
   tags = {
-    Name = "var.subnet-name"
+    Name = var.subnet-name
   }
 }
 
@@ -72,6 +72,6 @@ resource "aws_security_group" "security-group" {
   }
 
   tags = {
-    Name = "var.sg-name"
+    Name = var.sg-name
   }
 }

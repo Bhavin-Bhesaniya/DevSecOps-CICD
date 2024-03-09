@@ -2,3 +2,7 @@ DevSecOps-CICD-User_accessKeys.csv
 DevSecOps-CICD-Jenkins-SSH-Key.pem
 terraform/.terraform
 terraform/.terraform.lock.hcl
+nginx.txt
+EKS-Scripts/argo-cd.sh 
+EKS-Scripts/load-balancer-on-eks.sh 
+EKS-Scripts/promethues-grafana.sh

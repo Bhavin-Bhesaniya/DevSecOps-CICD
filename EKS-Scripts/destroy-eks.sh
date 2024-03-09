@@ -2,7 +2,6 @@
 AWS_REGION="ap-south-1"
 CLUSTER_NAME="Three-Tier-Cluster"
 NODEGROUP_NAME="ng-7f706939"
-CLUSTER_NAME="Three-Tier-Cluster"
 
 
 # Delete the node group

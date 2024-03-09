@@ -93,7 +93,7 @@ pipeline {
 
         // stage('Update Deployment file') {
         //     steps {
-        //         dir('Kubernetes-Manifests-file/Frontend') {
+        //         dir('Kubernetes-Manifests-file/Backend') {
         //             withCredentials([string(credentialsId: 'github', variable: 'github-personal-access-token')]) {
         //                 script {
         //                     sh '''
@@ -129,3 +129,6 @@ pipeline {
         }
     }
 }
+
+
+
