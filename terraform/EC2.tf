@@ -8,7 +8,7 @@ resource "aws_instance" "ec2" {
   root_block_device {
     volume_size = 30
   }
-  user_data = templatefile("./script.sh", {})
+  user_data = templatefile("./jenkins_server_script.sh", {})
 
   tags = {
     Name = var.instance-name

@@ -1,17 +1,14 @@
 #!/bin/bash
 echo -e "Welcom to DevSecOpc CICD Project Please Provice Some variable value to Process Furthermore\n"
-###############################################################################################################################################################
-# Variables
-###############################################################################################################################################################
+
 CLUSTER_NAME="Three-Tier-Cluster"
 AWS_REGION="ap-south-1"
 AWS_ACCOUNT_ID="3489-4964-0551"
 INSTANCE_TYPE="t2.medium"
 
-read -p "Enter Subnet ID -1: " SUBNET_ID_1
-read -p "Enter Subnet ID -2: " SUBNET_ID_2
-read -p "Enter Security ID:  " SECURITY_ID
-
+SUBNET_ID_1="10.0.1.0/24"
+SUBNET_ID_2="10.0.1.0/24"
+SECURITY_ID="sg-0ac5d9f244cdf493e"
 
 NODE_GROUP_NAME="eks-workers"
 NODE_TYPE="t2.medium"
@@ -23,32 +20,19 @@ LOAD_BALANCER_CONTROLLER_ROLE_NAME="AmazonEKSLoadBalancerControllerRole"
 LOAD_BALANCER_NAMESPACE="kube-system"
 FRONTEND_REPO="Frontend-Repo"
 PRIVATE_REPO="Private-Repo"
+NODE_ROLE_ARN="arn:aws:iam::348949640551:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS"
 
-
-eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --node-type $NODE_TYPE --nodes-min $NODES_COUNT --nodes-max $NODES_COUNT \
-    --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2 securityGroupIds=$SECURITY_ID \
-    --kubernetes-version 1.21
-
-aws eks wait cluster-active --region $AWS_REGION --name $CLUSTER_NAME
-CLUSTER_ROLE_ARN=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.roleArn" --output text)
-read -p "Enter Node role arn: " NODE_ROLE_ARN
-
-
+CLUSTER_ROLE_ARN=""
 echo -e "${AWS_REGION},${CLUSTER_NAME},${AWS_ACCOUNT_ID},${SUBNET_ID_1},${SUBNET_ID_2},${SECURITY_ID},${NODES_COUNT},${INSTANCE_TYPE},${CLUSTER_ROLE_ARN},${NODE_ROLE_ARN} \n"
 
-
-###############################################################################################################################################################
 # Creating the EKS cluster
-###############################################################################################################################################################
 cluster_exists=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.name" --output text 2>/dev/null)  # Check if EKS cluster already exists
 
 if [ "$cluster_exists" == "$CLUSTER_NAME" ]; then
     echo "EKS cluster '$CLUSTER_NAME' already exists. Skipping cluster creation."
 else
   echo -e "Creating AWS EKS cluster................................\n" 
-  eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --node-type $NODE_TYPE --nodes-min $NODES_COUNT --nodes-max $NODES_COUNT \
-    --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2 securityGroupIds=$SECURITY_ID \
-    --kubernetes-version 1.21
+  eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --node-type $NODE_TYPE --nodes-min $NODES_COUNT --nodes-max $NODES_COUNT
   # aws eks create-cluster \
   #   --name $CLUSTER_NAME \
   #   --region $AWS_REGION \
@@ -60,9 +44,11 @@ else
     echo "Failed to create EKS cluster. Exiting."
     exit 1
   fi
+fi
 
+CLUSTER_ROLE_ARN=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.roleArn" --output text)
 echo -e "Waiting for upto 15 minutes to cluster creation... tobe in the 'ACTIVE' status\n"  # kubectl get nodes # WAIT 15 UPTO MINUTES
-
+aws eks wait cluster-active --region $AWS_REGION --name $CLUSTER_NAME
 aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME                         # Create a kubeconfig file for the EKS cluster
 
 
@@ -85,6 +71,7 @@ else
     echo "Failed to create node group. Exiting."
     exit 1
   fi
+fi
 echo -e "EKS cluster creation completed. \n\n"
 
 
@@ -210,12 +197,11 @@ echo -e " To access the argoCD, copy the LoadBalancer DNS and hit on your favori
 ###############################################################################################################################################################
 # Create Kubernetes namespace
 ###############################################################################################################################################################
-<< 'END'
-As you know, Our two ECR repositories are private. So, when we try to push images to the ECR Repos it will give us the error Imagepullerror.
-To get rid of this error, we will create a secret for our ECR Repo in the same application namespcae, 
-Three-tier namespace by the below command and then, we will add this secret to the deployment file.
-Note: The Secrets are coming from the .docker/config.json file which is created while login the ECR in the earlier steps
-END
+# As you know, Our two ECR repositories are private. So, when we try to push images to the ECR Repos it will give us the error Imagepullerror.
+# To get rid of this error, we will create a secret for our ECR Repo in the same application namespcae, 
+# Three-tier namespace by the below command and then, we will add this secret to the deployment file.
+# Note: The Secrets are coming from the .docker/config.json file which is created while login the ECR in the earlier steps
+
 
 echo "Creating secrets for ECR Repo in the three-tier namespace..........."
 TT_NAMESPACE=three-tier
@@ -276,9 +262,9 @@ server {
         proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
         proxy_redirect off;
 
-        proxy_set_header    Host            \$host;
-        proxy_set_header    X-Real-IP       \$remote_addr;
-        proxy_set_header    X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header    Host              $host;
+        proxy_set_header    X-Real-IP         $remote_addr;
+        proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header    X-Forwarded-Proto https;
     }
 }
@@ -299,7 +285,7 @@ echo "Certbot configuration Completed for jenkins...............................
 sudo nano /etc/nginx/sites-avaliable/sonar-clovin.duckdns.org
 cat << EOF > /etc/nginx/sites-available/sonar-clovin.duckdns.org
 upstream sonarqube {
-    server 127.0.0.1:8080;
+    server 127.0.0.1:9000;
 }
 
 server {
@@ -317,9 +303,9 @@ server {
         proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
         proxy_redirect off;
 
-        proxy_set_header    Host            \$host;
-        proxy_set_header    X-Real-IP       \$remote_addr;
-        proxy_set_header    X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header    Host              $host;
+        proxy_set_header    X-Real-IP         $remote_addr;
+        proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header    X-Forwarded-Proto https;
     }
 }

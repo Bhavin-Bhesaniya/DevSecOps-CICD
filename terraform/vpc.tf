@@ -29,6 +29,17 @@ resource "aws_subnet" "public-subnet" {
   }
 }
 
+resource "aws_subnet" "public-subnet-2" {
+  vpc_id                  = aws_vpc.devsecops-jenkins-vpc.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "ap-south-1b"
+  map_public_ip_on_launch = "true"
+
+  tags = {
+    Name = var.subnet-name
+  }
+}
+
 # Route table 
 resource "aws_route_table" "rt" {
   vpc_id = aws_vpc.devsecops-jenkins-vpc.id
@@ -41,8 +52,13 @@ resource "aws_route_table" "rt" {
     Name = var.rt-name
   }
 }
-resource "aws_route_table_association" "rt-association" {
+resource "aws_route_table_association" "rt-association-1" {
   subnet_id      = aws_subnet.public-subnet.id
+  route_table_id = aws_route_table.rt.id
+}
+
+resource "aws_route_table_association" "rt-association-2" {
+  subnet_id      = aws_subnet.public-subnet-2.id
   route_table_id = aws_route_table.rt.id
 }
 
