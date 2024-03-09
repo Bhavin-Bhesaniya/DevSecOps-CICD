@@ -1,0 +1,4 @@
+DevSecOps-CICD-User_accessKeys.csv
+DevSecOps-CICD-Jenkins-SSH-Key.pem
+terraform/.terraform
+terraform/.terraform.lock.hcl

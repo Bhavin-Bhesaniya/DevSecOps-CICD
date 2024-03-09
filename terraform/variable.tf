@@ -1,0 +1,10 @@
+variable "vpc-name" {}
+variable "cidr-block-range" {}
+variable "igw-name" {}
+variable "rt-name" {}
+variable "subnet-name" {}
+variable "sg-name" {}
+variable "instance-name" {}
+variable "ami" {}
+variable "key-name" {}
+variable "iam-role" {}
