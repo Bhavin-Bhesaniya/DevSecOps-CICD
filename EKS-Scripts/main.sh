@@ -1,24 +1,21 @@
 #!/bin/bash
 echo -e "Welcom to DevSecOpc CICD Project Please Provice Some variable value to Process Furthermore\n"
-
 ###############################################################################################################################################################
 # Variables
 ###############################################################################################################################################################
 CLUSTER_NAME="Three-Tier-Cluster"
 AWS_REGION="ap-south-1"
-AWS_ACCOUNT_ID=""
-
-SUBNET_ID_1="YourSubnetID1"
-SUBNET_ID_2="YourSubnetID2"
-SECURITY_ID="YourSecurityGroupID"
-NODES_COUNT="YourNodesCount"
-
+AWS_ACCOUNT_ID="3489-4964-0551"
 INSTANCE_TYPE="t2.medium"
+
+read -p "Enter Subnet ID -1: " SUBNET_ID_1
+read -p "Enter Subnet ID -2: " SUBNET_ID_2
+read -p "Enter Security ID:  " SECURITY_ID
+
+
 NODE_GROUP_NAME="eks-workers"
 NODE_TYPE="t2.medium"
 NODES_COUNT="2"
-CLUSTER_ROLE_ARN="YourClusterRoleARN"
-NODE_ROLE_ARN="YourNodeRoleARN"
 
 LOAD_BALANCER_IAM_POLICY_NAME="AWSLoadBalancerControllerIAMPolicy"
 LOAD_BALANCER_CONTROLLER_NAME="aws-load-balancer-controller"
@@ -27,34 +24,46 @@ LOAD_BALANCER_NAMESPACE="kube-system"
 FRONTEND_REPO="Frontend-Repo"
 PRIVATE_REPO="Private-Repo"
 
+
+eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --node-type $NODE_TYPE --nodes-min $NODES_COUNT --nodes-max $NODES_COUNT \
+    --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2 securityGroupIds=$SECURITY_ID \
+    --kubernetes-version 1.21
+
+aws eks wait cluster-active --region $AWS_REGION --name $CLUSTER_NAME
+CLUSTER_ROLE_ARN=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.roleArn" --output text)
+read -p "Enter Node role arn: " NODE_ROLE_ARN
+
+
 echo -e "${AWS_REGION},${CLUSTER_NAME},${AWS_ACCOUNT_ID},${SUBNET_ID_1},${SUBNET_ID_2},${SECURITY_ID},${NODES_COUNT},${INSTANCE_TYPE},${CLUSTER_ROLE_ARN},${NODE_ROLE_ARN} \n"
 
 
 ###############################################################################################################################################################
 # Creating the EKS cluster
 ###############################################################################################################################################################
-# Check if EKS cluster already exists
-cluster_exists=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.name" --output text 2>/dev/null)
+cluster_exists=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.name" --output text 2>/dev/null)  # Check if EKS cluster already exists
 
 if [ "$cluster_exists" == "$CLUSTER_NAME" ]; then
     echo "EKS cluster '$CLUSTER_NAME' already exists. Skipping cluster creation."
 else
   echo -e "Creating AWS EKS cluster................................\n" 
-  aws eks create-cluster \
-    --name $CLUSTER_NAME \
-    --region $AWS_REGION \
-    --node-type $NODE_TYPE \
-    --role-arn $CLUSTER_ROLE_ARN \
-    --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2, securityGroupIds=$SECURITY_ID \
+  eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --node-type $NODE_TYPE --nodes-min $NODES_COUNT --nodes-max $NODES_COUNT \
+    --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2 securityGroupIds=$SECURITY_ID \
     --kubernetes-version 1.21
+  # aws eks create-cluster \
+  #   --name $CLUSTER_NAME \
+  #   --region $AWS_REGION \
+  #   --node-type $NODE_TYPE \
+  #   --role-arn $CLUSTER_ROLE_ARN \
+  #   --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2, securityGroupIds=$SECURITY_ID \
+  #   --kubernetes-version 1.21
   if [ $? -ne 0 ]; then
     echo "Failed to create EKS cluster. Exiting."
     exit 1
   fi
 
 echo -e "Waiting for upto 15 minutes to cluster creation... tobe in the 'ACTIVE' status\n"  # kubectl get nodes # WAIT 15 UPTO MINUTES
-aws eks wait cluster-active --region $AWS_REGION --name $CLUSTER_NAME
-aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME       # Create a kubeconfig file for the EKS cluster
+
+aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME                         # Create a kubeconfig file for the EKS cluster
 
 
 # Create worker nodes using managed node group

@@ -87,3 +87,8 @@ sudo install -m 755 k9s /usr/local/bin
 
 echo "--------------------Jenkins Password--------------------"
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+
+sleep 5
+
+git clone https://github.com/Bhavin-Bhesaniya/DevSecOps-CICD.git
