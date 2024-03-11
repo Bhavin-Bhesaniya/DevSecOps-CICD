@@ -1,6 +1,102 @@
 #!/bin/bash
 echo -e "Welcom to DevSecOpc CICD Project Please Provice Some variable value to Process Furthermore\n"
 
+###############################################################################################################################################################
+# Starting Nginx Configuration for reverse proxy, certbot
+###############################################################################################################################################################
+echo "Starting Nginx Configuration"
+sudo apt upgrade -y
+sudo apt install nginx -y
+sudo systemctl enable nginx
+sudo systemctl start nginx
+sudo apt install certbot python3-certbot-nginx -y     # Install Certbot
+echo "Installing successfully Nginx and Certbot"
+
+# Create or edit the Nginx configuration file for Jenkins
+sudo nano /etc/nginx/sites-available/jen-clovin.duckdns.org
+
+# Configuration content
+cat << EOF > /etc/nginx/sites-available/jen-clovin.duckdns.org
+upstream jenkins {
+    server 127.0.0.1:8080;
+}
+
+server {
+    listen      80;
+    server_name jen-clovin.duckdns.org;
+
+    access_log /var/log/nginx/jenkins.access.log;
+    error_log   /var/log/nginx/jenkins.error.log;
+
+    proxy_buffers 16 64k;
+    proxy_buffer_size 128k;
+
+    location / {
+        proxy_pass http://jenkins;
+        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+        proxy_redirect off;
+
+        proxy_set_header    Host              $host;
+        proxy_set_header    X-Real-IP         $remote_addr;
+        proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header    X-Forwarded-Proto https;
+    }
+}
+EOF
+
+sudo ln -s /etc/nginx/sites-available/jen-clovin.duckdns.org /etc/nginx/sites-enabled/    # Enable the site by creating a symbolic link
+sudo nginx -t                                                                             # Test for syntax errors
+sudo systemctl restart nginx                                                              # Restart Nginx to apply the changes
+
+echo "Openssl configuration for jenkins................................................................"
+sudo certbot --nginx -d jen-clovin.duckdns.org --agree-tos --email bkbhesaniya11@gmail.com
+sudo systemctl status certbot.timer
+sudo certbot renew --dry-run
+echo "Certbot configuration Completed for jenkins......................................................"
+
+
+# Sonarqube
+sudo nano /etc/nginx/sites-avaliable/sonar-clovin.duckdns.org
+cat << EOF > /etc/nginx/sites-available/sonar-clovin.duckdns.org
+upstream sonarqube {
+    server 127.0.0.1:9000;
+}
+
+server {
+    listen      80;
+    server_name sonar-clovin.duckdns.org;
+
+    access_log /var/log/nginx/sonarqube.access.log;
+    error_log /var/log/nginx/sonarqube.error.log;
+
+    proxy_buffers 16 64k;
+    proxy_buffer_size 128k;
+
+    location / {
+        proxy_pass http://sonarqube;
+        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+        proxy_redirect off;
+
+        proxy_set_header    Host              $host;
+        proxy_set_header    X-Real-IP         $remote_addr;
+        proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header    X-Forwarded-Proto https;
+    }
+}
+EOF
+
+sudo ln -s /etc/nginx/sites-available/sonar-clovin.duckdns.org /etc/nginx/sites-enabled/  # Enable the site by creating a symbolic link
+sudo nginx -t                                                                             # Test for syntax errors
+sudo systemctl restart nginx                                                              # Restart Nginx to apply the changes
+
+echo "Openssl configuration for sonarqube ................................................................"
+sudo certbot --nginx -d sonar-clovin.duckdns.org --agree-tos --email bkbhesaniya11@gmail.com
+sudo systemctl status certbot.timer
+sudo certbot renew --dry-run
+echo "Certbot configuration Completed for sonarqube ......................................................"
+
+
+
 CLUSTER_NAME="Three-Tier-Cluster"
 AWS_REGION="ap-south-1"
 AWS_ACCOUNT_ID="3489-4964-0551"
@@ -8,9 +104,9 @@ INSTANCE_TYPE="t2.medium"
 
 SUBNET_ID_1="10.0.1.0/24"
 SUBNET_ID_2="10.0.2.0/24"
-SECURITY_ID="sg-0ac5d9f244cdf493e"
+read -p "Enter Security ID: "SECURITY_ID
 
-NODE_GROUP_NAME="eks-workers"
+NODE_GROUP_NAME="Eks-Workers"
 NODE_TYPE="t2.medium"
 NODES_COUNT="2"
 
@@ -38,7 +134,7 @@ else
     --name $CLUSTER_NAME \
     --region $AWS_REGION \
     --node-type $NODE_TYPE \
-  #   --role-arn $CLUSTER_ROLE_ARN \
+    --role-arn $CLUSTER_ROLE_ARN \
     --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2, securityGroupIds=$SECURITY_ID \
     --kubernetes-version 1.21
   if [ $? -ne 0 ]; then
@@ -47,7 +143,7 @@ else
   fi
 fi
 
-CLUSTER_ROLE_ARN=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.roleArn" --output text)
+
 echo -e "Waiting for upto 15 minutes to cluster creation... tobe in the 'ACTIVE' status\n"  # kubectl get nodes # WAIT 15 UPTO MINUTES
 aws eks wait cluster-active --region $AWS_REGION --name $CLUSTER_NAME
 aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME                         # Create a kubeconfig file for the EKS cluster
@@ -129,8 +225,8 @@ kubectl get deployment -n $LOAD_BALANCER_NAMESPACE $LOAD_BALANCER_CONTROLLER_NAM
 ###############################################################################################################################################################
 # Create 2 ECR Repository Private (Frontend-Repo) and (Backend-Repo) then login
 ###############################################################################################################################################################
-# aws ecr create-repository --repository-name $FRONTEND_REPO --region $AWS_REGION
-# aws ecr create-repository --repository-name $BACKEND_REPO --region $AWS_REGION
+aws ecr create-repository --repository-name $FRONTEND_REPO --region $AWS_REGION
+aws ecr create-repository --repository-name $BACKEND_REPO --region $AWS_REGION
 
 echo "Logging in to AWS ECR..."
 aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -229,99 +325,6 @@ echo -e "Add Secret into deployment file in the three-tier namespace\n"
 
 
 
-###############################################################################################################################################################
-# Starting Nginx Configuration for reverse proxy, certbot
-###############################################################################################################################################################
-echo "Starting Nginx Configuration"
-sudo apt upgrade -y
-sudo apt install nginx -y
-sudo systemctl enable nginx
-sudo systemctl start nginx
-sudo apt install certbot python3-certbot-nginx -y     # Install Certbot
-echo "Installing successfully Nginx and Certbot"
-
-# Create or edit the Nginx configuration file for Jenkins
-sudo nano /etc/nginx/sites-available/jen-clovin.duckdns.org
-
-# Configuration content
-cat << EOF > /etc/nginx/sites-available/jen-clovin.duckdns.org
-upstream jenkins {
-    server 127.0.0.1:8080;
-}
-
-server {
-    listen      80;
-    server_name jen-clovin.duckdns.org;
-
-    access_log /var/log/nginx/jenkins.access.log;
-    error_log   /var/log/nginx/jenkins.error.log;
-
-    proxy_buffers 16 64k;
-    proxy_buffer_size 128k;
-
-    location / {
-        proxy_pass http://jenkins;
-        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
-        proxy_redirect off;
-
-        proxy_set_header    Host              $host;
-        proxy_set_header    X-Real-IP         $remote_addr;
-        proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header    X-Forwarded-Proto https;
-    }
-}
-EOF
-
-sudo ln -s /etc/nginx/sites-available/jen-clovin.duckdns.org /etc/nginx/sites-enabled/    # Enable the site by creating a symbolic link
-sudo nginx -t                                                                             # Test for syntax errors
-sudo systemctl restart nginx                                                              # Restart Nginx to apply the changes
-
-echo "Openssl configuration for jenkins................................................................"
-sudo certbot --nginx -d jen-clovin.duckdns.org --agree-tos --email bkbhesaniya11@gmail.com
-sudo systemctl status certbot.timer
-sudo certbot renew --dry-run
-echo "Certbot configuration Completed for jenkins......................................................"
-
-
-# Sonarqube
-sudo nano /etc/nginx/sites-avaliable/sonar-clovin.duckdns.org
-cat << EOF > /etc/nginx/sites-available/sonar-clovin.duckdns.org
-upstream sonarqube {
-    server 127.0.0.1:9000;
-}
-
-server {
-    listen      80;
-    server_name sonar-clovin.duckdns.org;
-
-    access_log /var/log/nginx/sonarqube.access.log;
-    error_log /var/log/nginx/sonarqube.error.log;
-
-    proxy_buffers 16 64k;
-    proxy_buffer_size 128k;
-
-    location / {
-        proxy_pass http://sonarqube;
-        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
-        proxy_redirect off;
-
-        proxy_set_header    Host              $host;
-        proxy_set_header    X-Real-IP         $remote_addr;
-        proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header    X-Forwarded-Proto https;
-    }
-}
-EOF
-
-sudo ln -s /etc/nginx/sites-available/sonar-clovin.duckdns.org /etc/nginx/sites-enabled/  # Enable the site by creating a symbolic link
-sudo nginx -t                                                                             # Test for syntax errors
-sudo systemctl restart nginx                                                              # Restart Nginx to apply the changes
-
-echo "Openssl configuration for sonarqube ................................................................"
-sudo certbot --nginx -d sonar-clovin.duckdns.org --agree-tos --email bkbhesaniya11@gmail.com
-sudo systemctl status certbot.timer
-sudo certbot renew --dry-run
-echo "Certbot configuration Completed for sonarqube ......................................................"
 
 
 

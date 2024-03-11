@@ -14,6 +14,9 @@ resource "aws_subnet" "subnets" {
   cidr_block              = var.subnet_cidrs[count.index]
   availability_zone       = var.azs[count.index % length(var.azs)]
   map_public_ip_on_launch = count.index < 2 ? true : false
+  tags = {
+    Name = "Subnet -${count.index}"
+  }
 }
 
 # Assign IGW for VPC
@@ -81,7 +84,7 @@ resource "aws_route_table_association" "Public-Route-Table-Association" {
 
 
 resource "aws_security_group" "security-group" {
-  name = "Security Group"
+  name        = "Security Group"
   vpc_id      = aws_vpc.devsecops-jenkins-vpc.id
   description = "Allowing Jenkins, Sonarqube, SSH Access"
 
