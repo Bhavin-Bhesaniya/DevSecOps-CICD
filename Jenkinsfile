@@ -18,6 +18,7 @@ pipeline {
         REPOSITORY_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/"
         GIT_REPO_NAME = 'DevSecOps-CICD'
         GIT_USER_NAME = 'Bhavin-Bhesaniya'
+        GITHUB_TOKEN = credentials('github')
     }
 
     stages {
@@ -88,7 +89,7 @@ pipeline {
             steps {
                 script {
                     def codeDir = params.PIPELINE_TYPE == 'frontend' ? 'Application-Code/frontend' : 'Application-Code/backend'
-                    def ecrRepoName = params.PIPELINE_TYPE == 'frontend' ? "${AWS_ECR_1}" : "${AWS_ECR_2}"
+                    def ecrRepoName = params.PIPELINE_TYPE == 'frontend' ? "${AWS_ECR_1}-repo" : "${AWS_ECR_2}-repo"
 
                     dir(codeDir) {
                         sh 'docker system prune -f'
@@ -102,9 +103,8 @@ pipeline {
         stage('Trivy Scan Image') {
             steps {
                 script {
-                    def ecrRepoName = params.PIPELINE_TYPE == 'frontend' ? "${AWS_ECR_1}" : "${AWS_ECR_2}"
-                    def outputFile = params.PIPELINE_TYPE == 'frontend' ? 'trivyimage-frontend-${BUILD_NUMBER}-${BUILD_ID}.txt' : 'trivyimage-backend-${BUILD_NUMBER}-${BUILD_ID}.txt'
-
+                    def ecrRepoName = params.PIPELINE_TYPE == 'frontend' ? "${AWS_ECR_1}-repo" : "${AWS_ECR_2}-repo"
+                    def outputFile = params.PIPELINE_TYPE == 'frontend' ? 'trivyimage-frontend-repo-${BUILD_NUMBER}-${BUILD_ID}.txt' : 'trivyimage-backend-repo-${BUILD_NUMBER}-${BUILD_ID}.txt'             
                     sh "trivy image ${ecrRepoName} > ${outputFile}"
                 }
             }
@@ -130,18 +130,18 @@ pipeline {
                     def ecrRepoName = params.PIPELINE_TYPE == 'frontend' ? "${AWS_ECR_1}-repo" : "${AWS_ECR_2}-repo"
 
                     dir(deploymentDir) {
-                        withCredentials([string(credentialsId: 'github', variable: 'github-personal-access-token')]) {
+                        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                             sh '''
                             git config user.email "bkbhesaniya11@gmail.com"
                             git config user.name "Bhavin Bhesaniya"
                             BUILD_NUMBER=${BUILD_NUMBER}
                             echo $BUILD_NUMBER
-                            imageTag=$(grep -oP '(?<=frontend:)[^ ]+' deployment.yaml)
+                            imageTag=$(grep -oP "(?<=${ecrRepoName}:)[^ ]+" deployment.yaml)
                             echo $imageTag
-                            sed -i "s/${ecrRepoName}:${imageTag}/${ecrRepoName}:${BUILD_NUMBER}/" deployment.yaml
+                            sed -i "s|${ecrRepoName}:${imageTag}|${ecrRepoName}:${BUILD_NUMBER}|" deployment.yaml
                             git add deployment.yaml
                             git commit -m "Update deployment Image to version \${BUILD_NUMBER}"
-                            git push https://${github-personal-access-token}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
                             '''
                         }
                     }
