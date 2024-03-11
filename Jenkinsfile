@@ -21,20 +21,6 @@ pipeline {
     }
 
     stages {
-        stage('User Input') {
-            steps {
-                script {
-                    // Use 'input' step to prompt the user for input
-                    def userInput = input(
-                        id: 'userInput', 
-                        message: 'Choose pipeline type:', 
-                        parameters: [choice(name: 'PIPELINE_TYPE', choices: ['frontend', 'backend'], description: 'Select the pipeline type to run')]
-                    )
-
-                    echo "Selected pipeline type: ${userInput.PIPELINE_TYPE}"
-                }
-            }
-        }
         stage('Clean Workspace') {
             steps {
                 cleanWs()
