@@ -1,10 +1,6 @@
 #!/bin/bash
 echo -e "Welcom to DevSecOpc CICD Project Please Provice Some variable value to Process Furthermore\n"
 
-
-
-
-
 CLUSTER_NAME="Three-Tier-Cluster"
 AWS_REGION="ap-south-1"
 AWS_ACCOUNT_ID="3489-4964-0551"
@@ -41,9 +37,8 @@ else
   aws eks create-cluster \
     --name $CLUSTER_NAME \
     --region $AWS_REGION \
-    --node-type $NODE_TYPE \
     --role-arn $CLUSTER_ROLE_ARN \
-    --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2, securityGroupIds=$SECURITY_ID \
+    --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2, securityGroupIds="$SECURITY_ID" \
     --kubernetes-version 1.21
   if [ $? -ne 0 ]; then
     echo "Failed to create EKS cluster. Exiting."
