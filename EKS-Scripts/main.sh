@@ -21,7 +21,7 @@ LOAD_BALANCER_NAMESPACE="kube-system"
 FRONTEND_REPO="Frontend-Repo"
 BACKEND_REPO="Backend-Repo"
 NODE_ROLE_ARN="arn:aws:iam::348949640551:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS"
-CLUSTER_ROLE_ARN=""
+CLUSTER_ROLE_ARN="arn:aws:eks:ap-south-1:348949640551:cluster/Three-Tier-Cluster"
 
 echo -e "${AWS_REGION},${CLUSTER_NAME},${AWS_ACCOUNT_ID},${SUBNET_ID_1},${SUBNET_ID_2},${SECURITY_ID},${NODES_COUNT},${INSTANCE_TYPE},${CLUSTER_ROLE_ARN},${NODE_ROLE_ARN} \n"
 
