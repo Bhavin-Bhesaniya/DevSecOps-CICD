@@ -1,8 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata: 
-  namespace: three-tier
   name: mongodb
+  namespace: three-tier
 spec: 
   replicas: 1
   selector:
@@ -58,20 +58,19 @@ spec:
   resources:
     requests:
       storage: 1Gi
-
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: mongo-pv
-spec:
-  capacity: 
-    storage: 1Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: /data/db
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: mongo-pv
+# spec:
+#   capacity: 
+#     storage: 1Gi
+#   volumeMode: Filesystem
+#   accessModes:
+#     - ReadWriteOnce
+#   hostPath:
+#     path: /data/db
 
 ---
 apiVersion: v1
