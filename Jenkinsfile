@@ -29,7 +29,7 @@ pipeline {
 
         stage('Checkout Git') {
             steps {
-                git branch: 'main', url: 'https://github.com/MohamedZezo7/Advanced-E2E-DevSecOps-Three-tier-Project.git'
+                git branch: 'main', url: 'https://github.com/Bhavin-Bhesaniya/DevSecOps-CICD.git'
             }
         }
 
