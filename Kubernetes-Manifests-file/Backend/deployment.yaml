@@ -25,7 +25,7 @@ spec:
       - name: ecr-registry-secret
       containers:
       - name: api
-        image: 490108295743.dkr.ecr.us-east-1.amazonaws.com/backend:43
+        image: 348949640551.dkr.ecr.ap-south-1.amazonaws.com/backend-repo # Changes
         imagePullPolicy: Always
         env:
           - name: MONGO_CONN_STR
@@ -55,3 +55,16 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
           successThreshold: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: three-tier
+spec: 
+  ports:
+  - port: 3500
+    protocol: TCP
+  type: ClusterIP
+  selector:
+    role: api

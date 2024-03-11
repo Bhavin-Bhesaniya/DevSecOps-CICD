@@ -21,6 +21,20 @@ pipeline {
     }
 
     stages {
+        stage('User Input') {
+            steps {
+                script {
+                    // Use 'input' step to prompt the user for input
+                    def userInput = input(
+                        id: 'userInput', 
+                        message: 'Choose pipeline type:', 
+                        parameters: [choice(name: 'PIPELINE_TYPE', choices: ['frontend', 'backend'], description: 'Select the pipeline type to run')]
+                    )
+
+                    echo "Selected pipeline type: ${userInput.PIPELINE_TYPE}"
+                }
+            }
+        }
         stage('Clean Workspace') {
             steps {
                 cleanWs()
@@ -114,7 +128,7 @@ pipeline {
         stage("ECR Image Pushing") {
             steps {
                 script {
-                    def ecrRepoName = params.PIPELINE_TYPE == 'frontend' ? "${AWS_ECR_1}" : "${AWS_ECR_2}"
+                    def ecrRepoName = params.PIPELINE_TYPE == 'frontend' ? "${AWS_ECR_1}-repo" : "${AWS_ECR_2}-repo"
                     def tagName = "${REPOSITORY_URI}${ecrRepoName}:${BUILD_NUMBER}"
 
                     sh 'aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${REPOSITORY_URI}'
@@ -123,12 +137,11 @@ pipeline {
                 }
             }
         }
-        /*
         stage('Update Deployment file') {
             steps {
                 script {
                     def deploymentDir = params.PIPELINE_TYPE == 'frontend' ? 'Kubernetes-Manifests-file/Frontend' : 'Kubernetes-Manifests-file/Backend'
-                    def ecrRepoName = params.PIPELINE_TYPE == 'frontend' ? "${AWS_ECR_1}" : "${AWS_ECR_2}"
+                    def ecrRepoName = params.PIPELINE_TYPE == 'frontend' ? "${AWS_ECR_1}-repo" : "${AWS_ECR_2}-repo"
 
                     dir(deploymentDir) {
                         withCredentials([string(credentialsId: 'github', variable: 'github-personal-access-token')]) {
@@ -149,7 +162,6 @@ pipeline {
                 }
             }
         }
-        */
     }
 
     post {
