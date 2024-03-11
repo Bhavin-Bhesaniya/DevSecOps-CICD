@@ -3,7 +3,13 @@ variable "vpc-name" {
   type        = string
 }
 
-variable "cidr-block-range" {
+variable "azs" {
+  default     = ["ap-south-1a", "ap-south-1b"]
+  description = "The AWS availability zones to deploy resources"
+  type        = list(string)
+}
+
+variable "vpc_cidr" {
   description = "The CIDR block range for the VPC"
   type        = string
 }
@@ -46,4 +52,9 @@ variable "key-name" {
 variable "iam-role" {
   description = "The IAM role to attach to the EC2 instance"
   type        = string
+}
+
+variable "subnet_cidrs" {
+  description = "CIDR blocks for subnets"
+  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24", "10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
 }

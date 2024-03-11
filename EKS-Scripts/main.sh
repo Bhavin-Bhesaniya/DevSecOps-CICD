@@ -19,60 +19,12 @@ LOAD_BALANCER_CONTROLLER_NAME="aws-load-balancer-controller"
 LOAD_BALANCER_CONTROLLER_ROLE_NAME="AmazonEKSLoadBalancerControllerRole"
 LOAD_BALANCER_NAMESPACE="kube-system"
 FRONTEND_REPO="Frontend-Repo"
-PRIVATE_REPO="Private-Repo"
+BACKEND_REPO="Backend-Repo"
 NODE_ROLE_ARN="arn:aws:iam::348949640551:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS"
-
 CLUSTER_ROLE_ARN=""
+
 echo -e "${AWS_REGION},${CLUSTER_NAME},${AWS_ACCOUNT_ID},${SUBNET_ID_1},${SUBNET_ID_2},${SECURITY_ID},${NODES_COUNT},${INSTANCE_TYPE},${CLUSTER_ROLE_ARN},${NODE_ROLE_ARN} \n"
 
-# Creating the EKS cluster
-cluster_exists=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.name" --output text 2>/dev/null)  # Check if EKS cluster already exists
-
-if [ "$cluster_exists" == "$CLUSTER_NAME" ]; then
-    echo "EKS cluster '$CLUSTER_NAME' already exists. Skipping cluster creation."
-else
-  echo -e "Creating AWS EKS cluster................................\n" 
-  eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION --node-type $NODE_TYPE --nodes-min $NODES_COUNT --nodes-max $NODES_COUNT
-  # aws eks create-cluster \
-  #   --name $CLUSTER_NAME \
-  #   --region $AWS_REGION \
-  #   --node-type $NODE_TYPE \
-  #   --role-arn $CLUSTER_ROLE_ARN \
-  #   --resources-vpc-config subnetIds=$SUBNET_ID_1,$SUBNET_ID_2, securityGroupIds=$SECURITY_ID \
-  #   --kubernetes-version 1.21
-  if [ $? -ne 0 ]; then
-    echo "Failed to create EKS cluster. Exiting."
-    exit 1
-  fi
-fi
-
-CLUSTER_ROLE_ARN=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.roleArn" --output text)
-echo -e "Waiting for upto 15 minutes to cluster creation... tobe in the 'ACTIVE' status\n"  # kubectl get nodes # WAIT 15 UPTO MINUTES
-aws eks wait cluster-active --region $AWS_REGION --name $CLUSTER_NAME
-aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME                         # Create a kubeconfig file for the EKS cluster
-
-
-# Create worker nodes using managed node group
-nodegroup_exists=$(aws eks describe-nodegroup --cluster-name $CLUSTER_NAME --nodegroup-name $NODE_GROUP_NAME --region $AWS_REGION --query "nodegroup.nodegroupName" --output text 2>/dev/null)
-if [ "$nodegroup_exists" == "eks-workers" ]; then
-  echo "Node group 'eks-workers' already exists. Skipping node group creation."
-else
-  echo -e "Creating node group................................\n"
-  aws eks create-nodegroup \
-    --region $AWS_REGION \
-    --cluster-name $CLUSTER_NAME \
-    --nodegroup-name $NODE_GROUP_NAME \
-    --subnets $SUBNET_ID_1 $SUBNET_ID_2 \
-    --instance-types $INSTANCE_TYPE \
-    --disk-size 20 \
-    --node-role $NODE_ROLE_ARN \
-    --scaling-config minSize=1,maxSize=$NODES_COUNT,desiredSize=$NODES_COUNT
-  if [ $? -ne 0 ]; then
-    echo "Failed to create node group. Exiting."
-    exit 1
-  fi
-fi
-echo -e "EKS cluster creation completed. \n\n"
 
 
 ###############################################################################################################################################################
@@ -124,11 +76,12 @@ kubectl get deployment -n $LOAD_BALANCER_NAMESPACE $LOAD_BALANCER_CONTROLLER_NAM
 
 
 
+
 ###############################################################################################################################################################
 # Create 2 ECR Repository Private (Frontend-Repo) and (Backend-Repo) then login
 ###############################################################################################################################################################
-aws ecr create-repository --repository-name $FRONTEND_REPO --region $AWS_REGION
-aws ecr create-repository --repository-name $PRIVATE_REPO --region $AWS_REGION
+# aws ecr create-repository --repository-name $FRONTEND_REPO --region $AWS_REGION
+# aws ecr create-repository --repository-name $BACKEND_REPO --region $AWS_REGION
 
 echo "Logging in to AWS ECR..."
 aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"

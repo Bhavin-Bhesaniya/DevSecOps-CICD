@@ -1,5 +1,5 @@
 vpc-name         = "devsecops-jenkins-vpc"
-cidr-block-range = "10.0.0.0/16"
+vpc_cidr = "10.0.0.0/16"
 igw-name         = "igw-vpc"
 subnet-name      = "jenkins-subnet"
 rt-name          = "rt-vpc"
